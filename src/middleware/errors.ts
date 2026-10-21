@@ -1,5 +1,4 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
-import { logger } from '../observability/logger';
 
 export class AppError extends Error {
   constructor(
@@ -36,8 +35,10 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   }
 
   if (status >= 500) {
-    logger.error({ err, method: req.method, path: req.path }, 'unhandled error');
+    req.log.error({ err }, 'unhandled error');
   }
 
-  res.status(status).json({ error: { code, message, ...(details ? { details } : {}) } });
+  res.status(status).json({
+    error: { code, message, requestId: req.id, ...(details ? { details } : {}) },
+  });
 };
