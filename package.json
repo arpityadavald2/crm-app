@@ -1,0 +1,53 @@
+{
+  "name": "crm-app",
+  "version": "0.1.0",
+  "description": "CRM application code",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arpityadavald2/crm-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/arpityadavald2/crm-app/issues"
+  },
+  "homepage": "https://github.com/arpityadavald2/crm-app#readme",
+  "private": "true",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0",
+    "prom-client": "^15.1.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.20.5",
+    "@types/supertest": "^7.2.1",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.10",
+    "supertest": "^7.3.1",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}
