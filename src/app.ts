@@ -1,7 +1,14 @@
+import { randomUUID } from 'node:crypto';
 import express from 'express';
 import helmet from 'helmet';
+import pinoHttp from 'pino-http';
 import { healthRouter } from './health/routes';
 import { errorHandler, notFoundHandler } from './middleware/errors';
+import { logger } from './observability/logger';
+import { metricsMiddleware, registry } from './observability/metrics';
+
+// Probes hit these every few seconds; logging them would only create noise.
+const QUIET_PATHS = new Set(['/health', '/ready', '/metrics']);
 
 export function createApp(): express.Express {
   const app = express();
@@ -10,10 +17,36 @@ export function createApp(): express.Express {
   // We will run behind Nginx/Cloudflare, so trust one proxy hop for the client IP.
   app.set('trust proxy', 1);
 
+  app.use(
+    pinoHttp({
+      logger,
+      // Reuse a valid incoming x-request-id (from Nginx), otherwise create one.
+      genReqId: (req, res) => {
+        const incoming = req.headers['x-request-id'];
+        const id =
+          typeof incoming === 'string' && /^[\w-]{8,64}$/.test(incoming) ? incoming : randomUUID();
+        res.setHeader('x-request-id', id);
+        return id;
+      },
+      autoLogging: { ignore: (req) => QUIET_PATHS.has(req.url ?? '') },
+      customLogLevel: (_req, res, err) => {
+        if (err || res.statusCode >= 500) return 'error';
+        if (res.statusCode >= 400) return 'warn';
+        return 'info';
+      },
+    }),
+  );
+  app.use(metricsMiddleware);
   app.use(helmet());
   app.use(express.json({ limit: '100kb' }));
 
   app.use(healthRouter);
+
+  // NOTE: in production, Nginx must allow /metrics only from monitoring/internal IPs.
+  app.get('/metrics', async (_req, res) => {
+    res.set('Content-Type', registry.contentType);
+    res.send(await registry.metrics());
+  });
 
   app.use(notFoundHandler);
   app.use(errorHandler);
