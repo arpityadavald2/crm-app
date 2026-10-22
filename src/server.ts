@@ -1,7 +1,10 @@
 import { createApp } from './app';
 import { env } from './config/env';
-import { markShuttingDown } from './health/readiness';
+import { pingDb, pool } from './db/pool';
+import { markShuttingDown, registerReadinessCheck } from './health/readiness';
 import { logger } from './observability/logger';
+
+registerReadinessCheck('mysql', () => pingDb(pool));
 
 const app = createApp();
 const server = app.listen(env.PORT, (error?: Error) => {
@@ -25,7 +28,13 @@ function shutdown(signal: string): void {
   markShuttingDown();
 
   // 2) stop accepting new connections, let in-flight requests finish
-  server.close((error) => {
+  server.close(async (error) => {
+    // 3) only now close the database pool
+    try {
+      await pool.end();
+    } catch (err) {
+      logger.error({ err }, 'error closing database pool');
+    }
     if (error) {
       logger.error({ err: error }, 'error during server close');
       process.exit(1);
@@ -34,7 +43,7 @@ function shutdown(signal: string): void {
     process.exit(0);
   });
 
-  // 3) hard stop if something hangs
+  // 4) hard stop if something hangs
   setTimeout(() => {
     logger.error('forced shutdown after timeout');
     process.exit(1);
