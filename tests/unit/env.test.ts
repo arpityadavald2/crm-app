@@ -26,8 +26,20 @@ describe('loadEnv', () => {
     expect(() => loadEnv({ NODE_ENV: 'production' })).toThrow(/DB_PASSWORD/);
   });
 
-  it('accepts production when DB_PASSWORD is set', () => {
-    const env = loadEnv({ NODE_ENV: 'production', DB_PASSWORD: 'x' });
+  it('requires a real JWT_SECRET in production', () => {
+    expect(() => loadEnv({ NODE_ENV: 'production', DB_PASSWORD: 'x' })).toThrow(/JWT_SECRET/);
+  });
+
+  it('rejects a JWT_SECRET shorter than 32 characters', () => {
+    expect(() => loadEnv({ JWT_SECRET: 'too-short' })).toThrow(/JWT_SECRET/);
+  });
+
+  it('accepts production when DB_PASSWORD and JWT_SECRET are set', () => {
+    const env = loadEnv({
+      NODE_ENV: 'production',
+      DB_PASSWORD: 'x',
+      JWT_SECRET: 'a-real-production-secret-of-sufficient-length',
+    });
     expect(env.NODE_ENV).toBe('production');
   });
 });
