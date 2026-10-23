@@ -13,5 +13,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "tests", "vitest.config.mts"]
+  "include": ["src", "tests", "migrations", "scripts", "vitest.config.mts"]
 }
