@@ -2,6 +2,10 @@ import { randomUUID } from 'node:crypto';
 import express from 'express';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
+import { mysqlAuthRepository, type AuthRepository } from './auth/repository';
+import { createAuthRouter } from './auth/routes';
+import { createCustomersRouter } from './customers/routes';
+import { mysqlCustomerRepository, type CustomerRepository } from './customers/repository';
 import { healthRouter } from './health/routes';
 import { errorHandler, notFoundHandler } from './middleware/errors';
 import { logger } from './observability/logger';
@@ -10,7 +14,15 @@ import { metricsMiddleware, registry } from './observability/metrics';
 // Probes hit these every few seconds; logging them would only create noise.
 const QUIET_PATHS = new Set(['/health', '/ready', '/metrics']);
 
-export function createApp(): express.Express {
+export interface AppOptions {
+  /** Tests pass fakes here; production uses the MySQL ones. */
+  authRepository?: AuthRepository;
+  customerRepository?: CustomerRepository;
+}
+
+export function createApp(options: AppOptions = {}): express.Express {
+  const authRepository = options.authRepository ?? mysqlAuthRepository;
+  const customerRepository = options.customerRepository ?? mysqlCustomerRepository;
   const app = express();
 
   app.disable('x-powered-by');
@@ -41,6 +53,8 @@ export function createApp(): express.Express {
   app.use(express.json({ limit: '100kb' }));
 
   app.use(healthRouter);
+  app.use('/auth', createAuthRouter(authRepository));
+  app.use('/customers', createCustomersRouter(customerRepository));
 
   // NOTE: in production, Nginx must allow /metrics only from monitoring/internal IPs.
   app.get('/metrics', async (_req, res) => {
