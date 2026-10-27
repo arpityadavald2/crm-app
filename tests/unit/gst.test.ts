@@ -15,13 +15,15 @@ describe('determineSupplyType', () => {
 
 describe('calculateLine: intra-state (CGST + SGST)', () => {
   it('Rs 500 x 2 at 18%', () => {
-    expect(calculateLine({ quantity: 2, unitPricePaise: 50000, gstRateBp: 1800 }, 'intra')).toEqual({
-      taxablePaise: 100000,
-      cgstPaise: 9000,
-      sgstPaise: 9000,
-      igstPaise: 0,
-      totalPaise: 118000,
-    });
+    expect(calculateLine({ quantity: 2, unitPricePaise: 50000, gstRateBp: 1800 }, 'intra')).toEqual(
+      {
+        taxablePaise: 100000,
+        cgstPaise: 9000,
+        sgstPaise: 9000,
+        igstPaise: 0,
+        totalPaise: 118000,
+      },
+    );
   });
 
   it('rounds the tax to the nearest paisa (12345 at 18% = 2222.1 -> 2222)', () => {
@@ -50,21 +52,29 @@ describe('calculateLine: intra-state (CGST + SGST)', () => {
 
 describe('calculateLine: inter-state (IGST)', () => {
   it('puts the whole tax in IGST', () => {
-    expect(calculateLine({ quantity: 2, unitPricePaise: 50000, gstRateBp: 1800 }, 'inter')).toEqual({
-      taxablePaise: 100000,
-      cgstPaise: 0,
-      sgstPaise: 0,
-      igstPaise: 18000,
-      totalPaise: 118000,
-    });
+    expect(calculateLine({ quantity: 2, unitPricePaise: 50000, gstRateBp: 1800 }, 'inter')).toEqual(
+      {
+        taxablePaise: 100000,
+        cgstPaise: 0,
+        sgstPaise: 0,
+        igstPaise: 18000,
+        totalPaise: 118000,
+      },
+    );
   });
 });
 
 describe('calculateLine: bad input', () => {
   it('rejects fractions and negatives', () => {
-    expect(() => calculateLine({ quantity: 1.5, unitPricePaise: 100, gstRateBp: 1800 }, 'intra')).toThrow();
-    expect(() => calculateLine({ quantity: 1, unitPricePaise: -100, gstRateBp: 1800 }, 'intra')).toThrow();
-    expect(() => calculateLine({ quantity: 1, unitPricePaise: 100, gstRateBp: 18.5 }, 'intra')).toThrow();
+    expect(() =>
+      calculateLine({ quantity: 1.5, unitPricePaise: 100, gstRateBp: 1800 }, 'intra'),
+    ).toThrow();
+    expect(() =>
+      calculateLine({ quantity: 1, unitPricePaise: -100, gstRateBp: 1800 }, 'intra'),
+    ).toThrow();
+    expect(() =>
+      calculateLine({ quantity: 1, unitPricePaise: 100, gstRateBp: 18.5 }, 'intra'),
+    ).toThrow();
   });
 });
 

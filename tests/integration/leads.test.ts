@@ -158,3 +158,13 @@ describe('leads: delete', () => {
     expect(after.status).toBe(404);
   });
 });
+
+describe('leads: roles', () => {
+  it('does not let accountant or sales delete a lead', async () => {
+    const lead = await createLead(ORG_A);
+    for (const role of ['accountant', 'sales'] as const) {
+      const res = await request(app).delete(`/leads/${lead.id}`).set(bearer(ORG_A, role));
+      expect(res.status).toBe(403);
+    }
+  });
+});
