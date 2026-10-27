@@ -7,6 +7,8 @@ import { createAuthRouter } from './auth/routes';
 import { createCustomersRouter } from './customers/routes';
 import { mysqlCustomerRepository, type CustomerRepository } from './customers/repository';
 import { healthRouter } from './health/routes';
+import { mysqlLeadRepository, type LeadRepository } from './leads/repository';
+import { createLeadsRouter } from './leads/routes';
 import { errorHandler, notFoundHandler } from './middleware/errors';
 import { logger } from './observability/logger';
 import { metricsMiddleware, registry } from './observability/metrics';
@@ -18,11 +20,13 @@ export interface AppOptions {
   /** Tests pass fakes here; production uses the MySQL ones. */
   authRepository?: AuthRepository;
   customerRepository?: CustomerRepository;
+  leadRepository?: LeadRepository;
 }
 
 export function createApp(options: AppOptions = {}): express.Express {
   const authRepository = options.authRepository ?? mysqlAuthRepository;
   const customerRepository = options.customerRepository ?? mysqlCustomerRepository;
+  const leadRepository = options.leadRepository ?? mysqlLeadRepository;
   const app = express();
 
   app.disable('x-powered-by');
@@ -55,6 +59,7 @@ export function createApp(options: AppOptions = {}): express.Express {
   app.use(healthRouter);
   app.use('/auth', createAuthRouter(authRepository));
   app.use('/customers', createCustomersRouter(customerRepository));
+  app.use('/leads', createLeadsRouter(leadRepository));
 
   // NOTE: in production, Nginx must allow /metrics only from monitoring/internal IPs.
   app.get('/metrics', async (_req, res) => {
