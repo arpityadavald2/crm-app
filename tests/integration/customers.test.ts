@@ -152,3 +152,18 @@ describe('customers: update and delete', () => {
     expect(after.status).toBe(404);
   });
 });
+
+describe('customers: roles', () => {
+  it('does not let accountant or sales delete a customer', async () => {
+    const created = await request(app)
+      .post('/customers')
+      .set(bearer(ORG_A))
+      .send({ name: 'Role Test Co' });
+    for (const role of ['accountant', 'sales'] as const) {
+      const res = await request(app)
+        .delete(`/customers/${created.body.customer.id}`)
+        .set(bearer(ORG_A, role));
+      expect(res.status).toBe(403);
+    }
+  });
+});
