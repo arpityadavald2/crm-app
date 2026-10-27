@@ -22,6 +22,11 @@ const schema = z
 
     JWT_SECRET: z.string().min(32).default(DEV_JWT_SECRET),
     JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).max(86400).default(900),
+
+    REDIS_HOST: z.string().min(1).default('127.0.0.1'),
+    REDIS_PORT: z.coerce.number().int().min(1).max(65535).default(6379),
+    // When the overdue-invoice reminder job runs (India time). Default: every day at 09:00.
+    REMINDER_CRON: z.string().min(1).default('0 9 * * *'),
   })
   .refine((e) => e.NODE_ENV !== 'production' || e.DB_PASSWORD.length > 0, {
     message: 'DB_PASSWORD is required in production',
