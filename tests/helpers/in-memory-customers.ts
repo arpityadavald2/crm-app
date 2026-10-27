@@ -59,6 +59,7 @@ export class InMemoryCustomerRepository implements CustomerRepository {
   }
 
   private strip(row: Customer & { deleted: boolean }): Customer {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { deleted: _deleted, ...customer } = row;
     return customer;
   }
