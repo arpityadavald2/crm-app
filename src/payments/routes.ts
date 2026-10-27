@@ -64,7 +64,7 @@ export function createPaymentsRouter(repo: PaymentRepository): Router {
   });
 
   router.get('/', async (req, res) => {
-    const invoiceId = parseBody(idSchema, req.params.id);
+    const invoiceId = parseBody(idSchema, (req.params as { id?: string }).id);
     const items = await repo.list(orgIdOf(req), invoiceId);
     if (!items) throw invoiceNotFound();
     res.json({ items });
