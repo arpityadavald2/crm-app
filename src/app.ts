@@ -13,6 +13,11 @@ import { mysqlInvoiceRepository, type InvoiceRepository } from './invoices/repos
 import { createInvoicesRouter } from './invoices/routes';
 import { mysqlPaymentRepository, type PaymentRepository } from './payments/repository';
 import { createPaymentsRouter } from './payments/routes';
+import {
+  mysqlOrganizationRepository,
+  type OrganizationRepository,
+} from './organization/repository';
+import { createOrganizationRouter } from './organization/routes';
 import { errorHandler, notFoundHandler } from './middleware/errors';
 import { logger } from './observability/logger';
 import { metricsMiddleware, registry } from './observability/metrics';
@@ -27,6 +32,7 @@ export interface AppOptions {
   leadRepository?: LeadRepository;
   invoiceRepository?: InvoiceRepository;
   paymentRepository?: PaymentRepository;
+  organizationRepository?: OrganizationRepository;
 }
 
 export function createApp(options: AppOptions = {}): express.Express {
@@ -35,6 +41,7 @@ export function createApp(options: AppOptions = {}): express.Express {
   const leadRepository = options.leadRepository ?? mysqlLeadRepository;
   const invoiceRepository = options.invoiceRepository ?? mysqlInvoiceRepository;
   const paymentRepository = options.paymentRepository ?? mysqlPaymentRepository;
+  const organizationRepository = options.organizationRepository ?? mysqlOrganizationRepository;
   const app = express();
 
   app.disable('x-powered-by');
@@ -70,6 +77,7 @@ export function createApp(options: AppOptions = {}): express.Express {
   app.use('/leads', createLeadsRouter(leadRepository));
   app.use('/invoices/:id/payments', createPaymentsRouter(paymentRepository));
   app.use('/invoices', createInvoicesRouter(invoiceRepository));
+  app.use('/organization', createOrganizationRouter(organizationRepository));
 
   // NOTE: in production, Nginx must allow /metrics only from monitoring/internal IPs.
   app.get('/metrics', async (_req, res) => {

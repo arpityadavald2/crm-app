@@ -12,7 +12,7 @@ function orgIdOf(req: Request): number {
 }
 
 // The first two digits of a GSTIN are the state code.
-function stateCodeFromGstin(gstin: string | null | undefined): string | null {
+export function stateCodeFromGstin(gstin: string | null | undefined): string | null {
   return gstin ? gstin.slice(0, 2) : null;
 }
 
