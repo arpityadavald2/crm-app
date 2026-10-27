@@ -11,6 +11,8 @@ import { mysqlLeadRepository, type LeadRepository } from './leads/repository';
 import { createLeadsRouter } from './leads/routes';
 import { mysqlInvoiceRepository, type InvoiceRepository } from './invoices/repository';
 import { createInvoicesRouter } from './invoices/routes';
+import { mysqlPaymentRepository, type PaymentRepository } from './payments/repository';
+import { createPaymentsRouter } from './payments/routes';
 import { errorHandler, notFoundHandler } from './middleware/errors';
 import { logger } from './observability/logger';
 import { metricsMiddleware, registry } from './observability/metrics';
@@ -24,6 +26,7 @@ export interface AppOptions {
   customerRepository?: CustomerRepository;
   leadRepository?: LeadRepository;
   invoiceRepository?: InvoiceRepository;
+  paymentRepository?: PaymentRepository;
 }
 
 export function createApp(options: AppOptions = {}): express.Express {
@@ -31,6 +34,7 @@ export function createApp(options: AppOptions = {}): express.Express {
   const customerRepository = options.customerRepository ?? mysqlCustomerRepository;
   const leadRepository = options.leadRepository ?? mysqlLeadRepository;
   const invoiceRepository = options.invoiceRepository ?? mysqlInvoiceRepository;
+  const paymentRepository = options.paymentRepository ?? mysqlPaymentRepository;
   const app = express();
 
   app.disable('x-powered-by');
@@ -64,6 +68,7 @@ export function createApp(options: AppOptions = {}): express.Express {
   app.use('/auth', createAuthRouter(authRepository));
   app.use('/customers', createCustomersRouter(customerRepository));
   app.use('/leads', createLeadsRouter(leadRepository));
+  app.use('/invoices/:id/payments', createPaymentsRouter(paymentRepository));
   app.use('/invoices', createInvoicesRouter(invoiceRepository));
 
   // NOTE: in production, Nginx must allow /metrics only from monitoring/internal IPs.

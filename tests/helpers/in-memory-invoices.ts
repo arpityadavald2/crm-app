@@ -13,7 +13,7 @@ import type {
 
 /** A fake "database" with the same org_id, numbering and status rules as the MySQL one. */
 export class InMemoryInvoiceRepository implements InvoiceRepository {
-  private rows: Invoice[] = [];
+  readonly rows: Invoice[] = [];
   private nextId = 1;
   private nextItemId = 1;
   private counters = new Map<string, number>();
