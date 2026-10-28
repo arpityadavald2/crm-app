@@ -46,6 +46,7 @@ export function createInvoicesRouter(repo: InvoiceRepository): Router {
       notes: body.notes ?? null,
       supplyType,
       sellerStateCode: parties.sellerStateCode,
+      sellerGstin: parties.sellerGstin,
       buyerStateCode: parties.buyerStateCode,
       items,
       totals,

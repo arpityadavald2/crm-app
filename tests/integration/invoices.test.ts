@@ -24,7 +24,11 @@ beforeEach(() => {
   const customers = new InMemoryCustomerRepository();
   app = createApp({
     customerRepository: customers,
-    invoiceRepository: new InMemoryInvoiceRepository(customers, { [ORG_A]: '03', [ORG_B]: '03' }),
+    invoiceRepository: new InMemoryInvoiceRepository(
+      customers,
+      { [ORG_A]: '03', [ORG_B]: '03' },
+      { [ORG_A]: PUNJAB_GSTIN, [ORG_B]: null },
+    ),
   });
 });
 
@@ -99,6 +103,18 @@ describe('invoices: create a draft', () => {
     expect(invoice.igstPaise).toBe(0);
     expect(invoice.totalPaise).toBe(118000);
     expect(invoice.items).toHaveLength(1);
+    expect(invoice.sellerStateCode).toBe('03');
+    expect(invoice.sellerGstin).toBe(PUNJAB_GSTIN);
+  });
+
+  it('shows sellerGstin as null when the organization has no GSTIN set', async () => {
+    const customerId = await createCustomer(ORG_B);
+    const res = await request(app)
+      .post('/invoices')
+      .set(bearer(ORG_B))
+      .send({ customerId, items: [item] });
+    expect(res.status).toBe(201);
+    expect(res.body.invoice.sellerGstin).toBeNull();
   });
 
   it('uses IGST when the buyer is in another state', async () => {
