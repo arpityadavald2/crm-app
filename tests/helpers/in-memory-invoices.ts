@@ -22,6 +22,7 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
   constructor(
     private readonly customers: InMemoryCustomerRepository,
     private readonly orgStateCodes: Record<number, string | null> = {},
+    private readonly orgGstins: Record<number, string | null> = {},
   ) {}
 
   private find(orgId: number, id: number): Invoice | undefined {
@@ -33,6 +34,7 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     if (!customer) return null;
     return {
       sellerStateCode: this.orgStateCodes[orgId] ?? null,
+      sellerGstin: this.orgGstins[orgId] ?? null,
       buyerStateCode: customer.stateCode,
     };
   }
@@ -48,6 +50,7 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
       dueDate: input.dueDate,
       supplyType: input.supplyType,
       sellerStateCode: input.sellerStateCode,
+      sellerGstin: input.sellerGstin,
       buyerStateCode: input.buyerStateCode,
       subtotalPaise: input.totals.subtotalPaise,
       cgstPaise: input.totals.cgstPaise,

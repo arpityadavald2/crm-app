@@ -27,6 +27,7 @@ export interface InvoiceSummary {
   dueDate: string | null;
   supplyType: SupplyType;
   sellerStateCode: string | null;
+  sellerGstin: string | null;
   buyerStateCode: string | null;
   subtotalPaise: number;
   cgstPaise: number;
@@ -50,6 +51,7 @@ export interface NewInvoice {
   notes: string | null;
   supplyType: SupplyType;
   sellerStateCode: string | null;
+  sellerGstin: string | null;
   buyerStateCode: string | null;
   items: NewInvoiceItem[];
   totals: InvoiceTotals;
@@ -64,6 +66,7 @@ export interface InvoiceListOptions {
 
 export interface Parties {
   sellerStateCode: string | null;
+  sellerGstin: string | null;
   buyerStateCode: string | null;
 }
 
@@ -97,6 +100,7 @@ interface InvoiceRow extends RowDataPacket {
   due_date: string | null;
   supply_type: SupplyType;
   seller_state_code: string | null;
+  seller_gstin: string | null;
   buyer_state_code: string | null;
   subtotal_paise: number;
   cgst_paise: number;
@@ -125,7 +129,7 @@ interface ItemRow extends RowDataPacket {
 const COLUMNS = `id, org_id, customer_id, invoice_number, status,
   DATE_FORMAT(issue_date, '%Y-%m-%d') AS issue_date,
   DATE_FORMAT(due_date, '%Y-%m-%d') AS due_date,
-  supply_type, seller_state_code, buyer_state_code,
+  supply_type, seller_state_code, seller_gstin, buyer_state_code,
   subtotal_paise, cgst_paise, sgst_paise, igst_paise, total_paise, amount_paid_paise,
   notes, created_at`;
 
@@ -143,6 +147,7 @@ function toSummary(row: InvoiceRow): InvoiceSummary {
     dueDate: row.due_date,
     supplyType: row.supply_type,
     sellerStateCode: row.seller_state_code,
+    sellerGstin: row.seller_gstin,
     buyerStateCode: row.buyer_state_code,
     subtotalPaise: Number(row.subtotal_paise),
     cgstPaise: Number(row.cgst_paise),
@@ -187,15 +192,21 @@ async function findById(orgId: number, id: number): Promise<Invoice | null> {
 export const mysqlInvoiceRepository: InvoiceRepository = {
   async findParties(orgId, customerId) {
     const [rows] = await pool.execute<
-      (RowDataPacket & { seller: string | null; buyer: string | null })[]
+      (RowDataPacket & {
+        seller: string | null;
+        seller_gstin: string | null;
+        buyer: string | null;
+      })[]
     >(
-      `SELECT o.state_code AS seller, c.state_code AS buyer
+      `SELECT o.state_code AS seller, o.gstin AS seller_gstin, c.state_code AS buyer
          FROM customers c JOIN organizations o ON o.id = c.org_id
         WHERE c.id = ? AND c.org_id = ? AND c.deleted_at IS NULL LIMIT 1`,
       [customerId, orgId],
     );
     const row = rows[0];
-    return row ? { sellerStateCode: row.seller, buyerStateCode: row.buyer } : null;
+    return row
+      ? { sellerStateCode: row.seller, sellerGstin: row.seller_gstin, buyerStateCode: row.buyer }
+      : null;
   },
 
   // Invoice + all its items are saved in ONE transaction: all of it, or none of it.
@@ -206,15 +217,16 @@ export const mysqlInvoiceRepository: InvoiceRepository = {
       await conn.beginTransaction();
       const [result] = await conn.execute<ResultSetHeader>(
         `INSERT INTO invoices
-           (org_id, customer_id, status, due_date, supply_type, seller_state_code, buyer_state_code,
+           (org_id, customer_id, status, due_date, supply_type, seller_state_code, seller_gstin, buyer_state_code,
             subtotal_paise, cgst_paise, sgst_paise, igst_paise, total_paise, notes)
-         VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, 'draft', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           orgId,
           input.customerId,
           input.dueDate,
           input.supplyType,
           input.sellerStateCode,
+          input.sellerGstin,
           input.buyerStateCode,
           input.totals.subtotalPaise,
           input.totals.cgstPaise,
