@@ -271,3 +271,49 @@ describe('invoices: list', () => {
     expect(all.body.items[0].items).toBeUndefined();
   });
 });
+
+describe('invoices: summary', () => {
+  it('requires a token', async () => {
+    const res = await request(app).get('/invoices/summary');
+    expect(res.status).toBe(401);
+  });
+
+  it('adds up invoices by status and finds the overdue ones', async () => {
+    const customerId = await createCustomer(ORG_A);
+    await createInvoice(ORG_A, customerId); // stays a draft
+    const overdue = await createInvoice(ORG_A, customerId, { dueDate: '2020-01-01' });
+    const current = await createInvoice(ORG_A, customerId, { dueDate: '2999-01-01' });
+    const toCancel = await createInvoice(ORG_A, customerId);
+    for (const inv of [overdue, current]) {
+      const issued = await request(app).post(`/invoices/${inv.id}/issue`).set(bearer(ORG_A));
+      expect(issued.status).toBe(200);
+    }
+    const cancelled = await request(app).post(`/invoices/${toCancel.id}/cancel`).set(bearer(ORG_A));
+    expect(cancelled.status).toBe(200);
+
+    const res = await request(app).get('/invoices/summary').set(bearer(ORG_A));
+    expect(res.status).toBe(200);
+    expect(res.body.summary).toEqual({
+      invoiceCounts: { draft: 1, issued: 2, partially_paid: 0, paid: 0, cancelled: 1 },
+      billedPaise: 236000,
+      receivedPaise: 0,
+      outstandingPaise: 236000,
+      overdueCount: 1,
+      overduePaise: 118000,
+    });
+  });
+
+  it('only counts the invoices of the caller organization', async () => {
+    const customerId = await createCustomer(ORG_A);
+    await createInvoice(ORG_A, customerId);
+    const res = await request(app).get('/invoices/summary').set(bearer(ORG_B));
+    expect(res.status).toBe(200);
+    expect(res.body.summary.invoiceCounts.draft).toBe(0);
+    expect(res.body.summary.billedPaise).toBe(0);
+  });
+
+  it('lets every role read it', async () => {
+    const res = await request(app).get('/invoices/summary').set(bearer(ORG_A, 'sales'));
+    expect(res.status).toBe(200);
+  });
+});

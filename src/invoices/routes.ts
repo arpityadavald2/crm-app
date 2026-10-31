@@ -65,6 +65,12 @@ export function createInvoicesRouter(repo: InvoiceRepository): Router {
     res.json({ items, page: query.page, limit: query.limit, total });
   });
 
+  // Totals for the dashboard. Must stay ABOVE "/:id", or "summary" would be read as an id.
+  router.get('/summary', async (req, res) => {
+    const summary = await repo.summarize(orgIdOf(req), todayInIndia());
+    res.json({ summary });
+  });
+
   router.get('/:id', async (req, res) => {
     const id = parseBody(idSchema, req.params.id);
     const invoice = await repo.findById(orgIdOf(req), id);
