@@ -2,6 +2,7 @@ import type { InMemoryCustomerRepository } from './in-memory-customers';
 import { fiscalYearOf, formatInvoiceNumber } from '../../src/invoices/numbering';
 import type {
   CancelResult,
+  DashboardSummary,
   Invoice,
   InvoiceListOptions,
   InvoiceRepository,
@@ -105,6 +106,40 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     if (!cancellable) return { kind: 'not_cancellable' };
     row.status = 'cancelled';
     return { kind: 'cancelled', invoice: structuredClone(row) };
+  }
+
+  async summarize(orgId: number, today: string): Promise<DashboardSummary> {
+    const counts: DashboardSummary['invoiceCounts'] = {
+      draft: 0,
+      issued: 0,
+      partially_paid: 0,
+      paid: 0,
+      cancelled: 0,
+    };
+    let billedPaise = 0;
+    let receivedPaise = 0;
+    let overdueCount = 0;
+    let overduePaise = 0;
+    for (const row of this.rows.filter((r) => r.orgId === orgId)) {
+      counts[row.status] += 1;
+      if (row.status === 'issued' || row.status === 'partially_paid' || row.status === 'paid') {
+        billedPaise += row.totalPaise;
+        receivedPaise += row.amountPaidPaise;
+      }
+      const open = row.status === 'issued' || row.status === 'partially_paid';
+      if (open && row.dueDate !== null && row.dueDate < today) {
+        overdueCount += 1;
+        overduePaise += row.totalPaise - row.amountPaidPaise;
+      }
+    }
+    return {
+      invoiceCounts: counts,
+      billedPaise,
+      receivedPaise,
+      outstandingPaise: billedPaise - receivedPaise,
+      overdueCount,
+      overduePaise,
+    };
   }
 
   private summary(row: Invoice): InvoiceSummary {

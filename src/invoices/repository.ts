@@ -76,6 +76,18 @@ export type IssueResult =
 export type CancelResult =
   { kind: 'not_found' } | { kind: 'not_cancellable' } | { kind: 'cancelled'; invoice: Invoice };
 
+/** Totals for the dashboard. Cancelled and draft invoices are counted but never add to the money. */
+export interface DashboardSummary {
+  invoiceCounts: Record<InvoiceStatus, number>;
+  /** Total of issued, partially paid and paid invoices. */
+  billedPaise: number;
+  receivedPaise: number;
+  outstandingPaise: number;
+  /** Issued or partially paid invoices whose due date is before today. */
+  overdueCount: number;
+  overduePaise: number;
+}
+
 /** Every method takes orgId first and uses it in every query. */
 export interface InvoiceRepository {
   /** State codes of the seller (our organization) and the buyer. null = customer not in this org. */
@@ -88,6 +100,8 @@ export interface InvoiceRepository {
   findById(orgId: number, id: number): Promise<Invoice | null>;
   issue(orgId: number, id: number, issueDate: string): Promise<IssueResult>;
   cancel(orgId: number, id: number): Promise<CancelResult>;
+  /** today = India date as YYYY-MM-DD. */
+  summarize(orgId: number, today: string): Promise<DashboardSummary>;
 }
 
 interface InvoiceRow extends RowDataPacket {
@@ -294,6 +308,47 @@ export const mysqlInvoiceRepository: InvoiceRepository = {
   },
 
   findById,
+
+  async summarize(orgId, today) {
+    const [rows] = await pool.execute<(RowDataPacket & Record<string, string | number>)[]>(
+      `SELECT
+         COALESCE(SUM(status = 'draft'), 0) AS draft_count,
+         COALESCE(SUM(status = 'issued'), 0) AS issued_count,
+         COALESCE(SUM(status = 'partially_paid'), 0) AS partially_paid_count,
+         COALESCE(SUM(status = 'paid'), 0) AS paid_count,
+         COALESCE(SUM(status = 'cancelled'), 0) AS cancelled_count,
+         COALESCE(SUM(CASE WHEN status IN ('issued', 'partially_paid', 'paid')
+                           THEN total_paise END), 0) AS billed_paise,
+         COALESCE(SUM(CASE WHEN status IN ('issued', 'partially_paid', 'paid')
+                           THEN amount_paid_paise END), 0) AS received_paise,
+         COALESCE(SUM(CASE WHEN status IN ('issued', 'partially_paid')
+                            AND due_date IS NOT NULL AND due_date < ? THEN 1 END), 0) AS overdue_count,
+         COALESCE(SUM(CASE WHEN status IN ('issued', 'partially_paid')
+                            AND due_date IS NOT NULL AND due_date < ?
+                           THEN total_paise - amount_paid_paise END), 0) AS overdue_paise
+         FROM invoices
+        WHERE org_id = ?`,
+      [today, today, orgId],
+    );
+    const row = rows[0];
+    const n = (key: string): number => Number(row?.[key] ?? 0);
+    const billedPaise = n('billed_paise');
+    const receivedPaise = n('received_paise');
+    return {
+      invoiceCounts: {
+        draft: n('draft_count'),
+        issued: n('issued_count'),
+        partially_paid: n('partially_paid_count'),
+        paid: n('paid_count'),
+        cancelled: n('cancelled_count'),
+      },
+      billedPaise,
+      receivedPaise,
+      outstandingPaise: billedPaise - receivedPaise,
+      overdueCount: n('overdue_count'),
+      overduePaise: n('overdue_paise'),
+    };
+  },
 
   // The invoice row is locked, the counter is bumped and the number is saved in ONE transaction.
   // Two people issuing at the same moment can never get the same number.
