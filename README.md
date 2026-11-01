@@ -74,3 +74,12 @@ The image's health check calls `/health`. The worker has no HTTP port, so start 
 ## Smoke tests against real MySQL
 
 The in-memory test fakes do not run real SQL. `scripts/smoke-*.ts` files are for local checks only and are not committed. Never run them against production.
+
+## Deployment
+
+Every merge to `main` publishes two images to GHCR, both tagged with the full commit SHA:
+
+- `ghcr.io/arpityadavald2/crm-app:<sha>` runs the API (`node dist/server.js`) and the worker (`node dist/worker.js`).
+- `ghcr.io/arpityadavald2/crm-app:<sha>-migrate` runs database migrations as a one-off job.
+
+Servers are deployed with Ansible (`crm-ansible`, `playbooks/deploy.yml`), always with an explicit SHA. Never deploy `latest`.
