@@ -7,8 +7,6 @@ coverage
 !.env.example
 *.log
 tests
-scripts
-migrations
 docker-compose.yml
 README.md
 .nvmrc

@@ -38,3 +38,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t crm-app:ci .
+      - run: docker build --target migrate -t crm-app:migrate-ci .
