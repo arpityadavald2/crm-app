@@ -26,3 +26,7 @@ jobs:
             --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
             -t "$IMAGE:${GITHUB_SHA}" .
           docker push "$IMAGE:${GITHUB_SHA}"
+          docker build --target migrate \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            -t "$IMAGE:${GITHUB_SHA}-migrate" .
+          docker push "$IMAGE:${GITHUB_SHA}-migrate"
