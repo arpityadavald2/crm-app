@@ -13,6 +13,14 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
+# ---- migrate stage: one-off job image (tsx + migrations), not used at runtime ----
+FROM build AS migrate
+COPY migrations ./migrations
+COPY scripts ./scripts
+USER node
+ENTRYPOINT ["node_modules/.bin/tsx", "scripts/migrate.ts"]
+CMD ["status"]
+
 # ---- runtime stage: small, non-root ----
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
